@@ -1,3 +1,4 @@
+<img width="1400" height="300" alt="logo" src="https://github.com/user-attachments/assets/c5b02c95-2ab8-416d-886f-b0db1ffe58fb" />
 # 🚀 My Personal Arch Linux Installation Guide & Script
 
 A streamlined, custom Arch Linux installation setup tailored for performance, minimalism, and a modern tiling window manager experience.
