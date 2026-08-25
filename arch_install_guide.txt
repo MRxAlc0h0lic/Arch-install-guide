@@ -1,0 +1,105 @@
+==================================================
+دليل تثبيت Arch Linux
+نسخة منقّحة من ملاحظات التثبيت
+تقسيم القرص: EFI بحجم 1GB، Swap بحجم 10GB، ونظام الملفات على الباقي
+==================================================
+
+--------------------------------------------------
+01 - الاتصال بالإنترنت
+--------------------------------------------------
+عبر iwctl لو الشبكة لاسلكية. لو فيه كابل إيثرنت متوصّل، الخطوة دي مش لازمة.
+
+# iwctl
+[iwd]# device list
+[iwd]# station wlan0 scan
+[iwd]# station wlan0 get-networks
+[iwd]# station wlan0 connect "اسم_الشبكة"
+[iwd]# exit
+
+بديل: ممكن تستخدم nmcli بدل iwctl:
+nmcli device wifi connect "SSID" --ask
+
+--------------------------------------------------
+02 - فحص وتقسيم القرص
+--------------------------------------------------
+تأكيد اسم القرص أولاً بـ lsblk، بعدين فتح cfdisk لعمل ثلاثة أقسام.
+
+# lsblk
+# cfdisk /dev/sda
+
+sda1   1G     EFI System
+sda2   10G    Linux swap
+sda3   الباقي  Linux filesystem
+
+--------------------------------------------------
+03 - تهيئة الأقسام (Format)
+--------------------------------------------------
+# mkfs.fat -F32 /dev/sda1
+# mkswap /dev/sda2
+# mkfs.ext4 /dev/sda3
+
+--------------------------------------------------
+04 - تركيب الأقسام (Mount)
+--------------------------------------------------
+# mount /dev/sda3 /mnt
+# mount --mkdir /dev/sda1 /mnt/boot/efi
+# swapon /dev/sda2
+
+--------------------------------------------------
+05 - تثبيت النظام الأساسي
+--------------------------------------------------
+# pacstrap -K /mnt base base-devel linux linux-firmware \
+    nano networkmanager fastfetch
+
+--------------------------------------------------
+06 - إنشاء fstab والدخول للنظام
+--------------------------------------------------
+# genfstab -U /mnt >> /mnt/etc/fstab
+# arch-chroot /mnt
+
+--------------------------------------------------
+07 - التوقيت
+--------------------------------------------------
+[chroot]# ln -sf /usr/share/zoneinfo/Africa/Cairo /etc/localtime
+[chroot]# hwclock --systohc
+
+--------------------------------------------------
+08 - اللغة (Locale)
+--------------------------------------------------
+[chroot]# nano /etc/locale.gen   # شيل الـ # من قدام en_US.UTF-8 UTF-8
+[chroot]# locale-gen
+[chroot]# echo "LANG=en_US.UTF-8" > /etc/locale.conf
+
+--------------------------------------------------
+09 - اسم الجهاز والمستخدم
+--------------------------------------------------
+[chroot]# nano /etc/hostname
+[chroot]# passwd                     # كلمة سر root
+[chroot]# useradd -m -G wheel youssif
+[chroot]# passwd youssif
+[chroot]# EDITOR=nano visudo         # شيل الـ # من قدام %wheel ALL=(ALL:ALL) ALL
+
+--------------------------------------------------
+10 - تثبيت المُقلع (GRUB)
+--------------------------------------------------
+[chroot]# pacman -S grub efibootmgr dosfstools mtools os-prober
+[chroot]# grub-install --target=x86_64-efi \
+    --efi-directory=/boot/efi --bootloader-id=GRUB
+[chroot]# grub-mkconfig -o /boot/grub/grub.cfg
+
+تصحيح مهم: في ملاحظاتك الأصلية كان فيه grub-install /dev/sda1 — ده أمر
+صح بس لنظام BIOS/MBR. نظامك مقسّم بـ EFI partition، فلازم يبقى UEFI mode
+زي فوق، وإلا هيرجعلك نفس مشكلة "unknown filesystem" اللي واجهتها قبل
+كده في GRUB rescue.
+
+--------------------------------------------------
+11 - تفعيل الشبكة والخروج
+--------------------------------------------------
+[chroot]# systemctl enable NetworkManager
+[chroot]# exit
+# umount -R /mnt
+# reboot
+
+==================================================
+arch install log - corrected & reformatted - Africa/Cairo
+==================================================
